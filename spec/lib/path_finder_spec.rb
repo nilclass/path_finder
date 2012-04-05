@@ -102,20 +102,24 @@ describe QueryBuilder::PathFinder do
   describe ".lookup_join" do
     it "finds Foo#bars" do
       join = described_class.lookup_join(Foo, 'bars')
-      join[0].should eq Bar.arel_table
-      join[1].should eq 'foo_id'
-      join[2].should eq Foo.arel_table
-      join[3].should eq 'id'
-      join[4].should eq :outer
+      join.should eq [
+        Bar.arel_table,
+        'foo_id',
+        Foo.arel_table,
+        'id',
+        :outer
+      ]
     end
 
     it "finds Bar#foos" do
       join = described_class.lookup_join(Bar, 'foo')
-      join[0].should eq Foo.arel_table
-      join[1].should eq 'id'
-      join[2].should eq Bar.arel_table
-      join[4].should eq 'bar_id'
-      join[4].should eq :inner
+      join.should eq [
+        Foo.arel_table,
+        'id',
+        Bar.arel_table,
+        'foo_id',
+        :inner
+      ]
     end
 
   end
