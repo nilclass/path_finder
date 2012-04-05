@@ -8,7 +8,6 @@ describe PathFinder do
   }
 
   before do
-    @model = Foo
     @path = '/foos/bar=baz/AND/baz=foo/bars/abc=123/OR/cba=321'
   end
 
@@ -44,16 +43,15 @@ describe PathFinder do
     end
 
     it "finds the right foos" do
-      results = subject.results(@model, @path)
+      results = subject.results(@path)
       results.entries.map {|entry|
         entry['id'].to_i
       }.should =~ @found_foos.map(&:id)
     end
 
     it "finds the right bars" do
-      @model = Bar
       @path = '/bars/abc=123/foo/bar=baz'
-      results = subject.results(@model, @path)
+      results = subject.results(@path)
       results.entries.map {|entry|
         entry['id'].to_i
       }.should =~ [@found_foos[0].bars[0].id]

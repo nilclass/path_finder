@@ -1,6 +1,16 @@
 class PathFinder::PathParser
 
-  include PathFinder::StatementHelper
+  Condition = Struct.new(:operator, :key, :value)
+  Token = Struct.new(:type, :data)
+
+
+  module TokenHelper
+    def tk(type, *data)
+      Token.new(type, data)
+    end
+  end
+
+  include TokenHelper
 
   STMT_SEP_RE = /\//
   KEYVAL_RE = /^([^=]+)=(.*)$/
@@ -8,32 +18,30 @@ class PathFinder::PathParser
 
   DEFAULT_OPERATOR = 'AND'
 
-  attr :tokens
+  def walk_path(path, &callback)
 
-  def initialize(path)
-    @path = path
-    @tokens = tokenize_path
-  end
+    # Dear code. I simply don't love you as much, as the code in that
+    # other file. It's not your fault, it's just that the code in the
+    # other file understands me, we somehow connect, it inspires me.
+    # Anyway, all I wanted to say is: there's simply no way I'm going
+    # to comment you!
 
-  def walk_path(&callback)
+    tokens = tokenize_path(path)
+
     scope, conditions, operator = nil, nil, nil
 
-    init_scope = -> token {
-      scope = token[1]
-      conditions = []
-      operator = DEFAULT_OPERATOR
-    }
+    scope_defaults = -> scope { [scope, [], DEFAULT_OPERATOR] }
 
     tokens.each do |token|
       if scope
-        case token[0]
+        case token.type
         when :scope
           callback.call(scope, conditions, operator)
-          init_scope[token]
+          scope, conditions, operator = *scope_defaults[*token.data]
         when :key_value
-          conditions.push([operator, token[1], token[2]])
+          conditions.push(Condition.new(operator, *token.data))
         when :operator
-          operator = token[1]
+          operator = token.data.first
         else
           raise PathFinder::ParseError, "Unknown token: #{token[0]}. This should never happen."
         end
@@ -41,7 +49,7 @@ class PathFinder::PathParser
         unless token[0] == :scope
           raise PathFinder::ParseError, "Unexpected token. Expected :scope, got #{token[0].inspect}. Tokens are: #{tokens.inspect}"
         end
-        init_scope[token]
+        scope, conditions, operator = *scope_defaults[*token.data]
       end
     end
 
@@ -49,19 +57,17 @@ class PathFinder::PathParser
 
   end
 
-  protected
-
-  def tokenize_path
-    @path.split(STMT_SEP_RE).map { |part|
+  def tokenize_path(path)
+    path.split(STMT_SEP_RE).map { |part|
       case part
       when KEYVAL_RE
-        stmt(:key_value, $~[1], $~[2])
+        tk(:key_value, $~[1], $~[2])
       when OP_RE
-        stmt(:operator, $~[1])
+        tk(:operator, $~[1])
       when ''
         nil
       else
-        stmt(:scope, part)
+        tk(:scope, part)
       end
     }.compact
   end

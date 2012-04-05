@@ -1,5 +1,6 @@
-PATH
-  remote: /home/nil/src/arel
+GIT
+  remote: git://github.com/nilclass/arel.git
+  revision: f0020cb8230bfc498a0d0a93da3e285355862c06
   specs:
     arel (3.0.2.20120221150532)
 
