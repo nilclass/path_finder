@@ -1,5 +1,9 @@
 
-require File.join(File.dirname(__FILE__), '..', 'lib', 'query_builder')
+require 'bundler'
+
+Bundler.require
+
+require File.join(File.dirname(__FILE__), '..', 'lib', 'path_finder')
 
 require 'database_cleaner'
 

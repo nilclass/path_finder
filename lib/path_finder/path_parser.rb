@@ -1,6 +1,6 @@
-class QueryBuilder::PathParser
+class PathFinder::PathParser
 
-  include QueryBuilder::StatementHelper
+  include PathFinder::StatementHelper
 
   STMT_SEP_RE = /\//
   KEYVAL_RE = /^([^=]+)=(.*)$/
@@ -35,11 +35,11 @@ class QueryBuilder::PathParser
         when :operator
           operator = token[1]
         else
-          raise QueryBuilder::ParseError, "Unknown token: #{token[0]}. This should never happen."
+          raise PathFinder::ParseError, "Unknown token: #{token[0]}. This should never happen."
         end
       else
         unless token[0] == :scope
-          raise QueryBuilder::ParseError, "Unexpected token. Expected :scope, got #{token[0].inspect}. Tokens are: #{tokens.inspect}"
+          raise PathFinder::ParseError, "Unexpected token. Expected :scope, got #{token[0].inspect}. Tokens are: #{tokens.inspect}"
         end
         init_scope[token]
       end

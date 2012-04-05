@@ -1,12 +1,4 @@
-###
-## /foo/bar=baz
-##   => SELECT * FROM foo WHERE foo.bar = "baz"
-##
-##
-##
-##
-##
-class QueryBuilder::PathFinder
+class PathFinder::QueryBuilder
 
   attr :model
   attr :path
@@ -14,54 +6,74 @@ class QueryBuilder::PathFinder
   def initialize(model, path)
     @model = model
     @path = path
-    @parser = QueryBuilder::PathParser.new(@path)
+    @parser = PathFinder::PathParser.new(@path)
   end
 
   def tokens
     @parser.tokens
   end
 
-  def results(offset=nil, limit=nil)
-    model.connection.execute(
-      build_query.
-      skip(offset).
+  def build_query(limit=nil, offset=nil)
+    query = model.
+      arel_table.
+      project(model.arel_table.columns).
+      distinct.
       take(limit).
-      to_sql.tap {|q| puts q }
-      )
-  end
+      skip(offset)
 
-  def build_query
-    query = model.arel_table.project(Arel.sql('*'))
-    applied_scopes = {
-      model.table_name => true
+    scope_tables = {
+      model.table_name => model.arel_table
     }
-    puts "WALKING"
     @parser.walk_path do |scope, conditions, operator|
-      unless applied_scopes[scope]
+      unless scope_tables[scope]
         joins = lookup_joins(model, scope)
         if joins.empty?
-          raise QueryBuilder::ScopeNotDefined, "Scope #{scope.inspect} not defined for model #{model.name}"
+          raise PathFinder::ScopeNotDefined, "Scope #{scope.inspect} not defined for model #{model.name}"
         end
-        query = joins.inject(query) do |q, join|
-          apply_join(q, join)
+
+        table = nil
+
+        joins.each do |join|
+          table = apply_join(query, join)
         end
-        applied_scopes[scope] = true
+
+        # the table joined over last, is the namespace
+        # of the columns used in conditions.
+        scope_tables[scope] = table
       end
 
+      table = scope_tables[scope]
+
+      condition_node = nil
+
       conditions.each do |operator, key, value|
+        node = build_condition_node(table, key, value)
+        condition_node = (condition_node ?
+          condition_node.__send__(operator.downcase.to_sym, node) :
+          node
+        )
       end
+
+      query.where(condition_node)
     end
 
     return query
   end
 
+  def build_condition_node(table, key, value)
+    # TODO: do different things with different types and differently formatted values.
+    table[key].eq(value)
+  end
+
   def apply_join(query, join)
     join_table, foreign_key, table, primary_key, type = *join
     type_node = (type == :inner ? Arel::Nodes::InnerJoin : Arel::Nodes::OuterJoin)
-    puts "APPLYING JOIN #{join.inspect}"
-    return query.
-      join(join_table, type_node).
-      on(join_table[foreign_key].eq(table[primary_key]))
+    query.join(
+      join_table, type_node
+    ).on(
+      join_table[foreign_key].eq(table[primary_key])
+    )
+    return join_table
   end
 
   def lookup_joins(model, scope)
