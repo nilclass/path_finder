@@ -1,4 +1,5 @@
-= QueryBuilder
+QueryBuilder
+------------
 
 An attempt to convert web-friendly path to complex queries, by applying information derived from associations modeled using ActiveRecord.
 
